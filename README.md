@@ -118,8 +118,7 @@ Keep-Alive: timeout=5
     "title":"Learn Swagger","done":true
   }
 ]
-
-  ```
+```
 ## Swagger Documentation
 
 Swagger UI is available at:
