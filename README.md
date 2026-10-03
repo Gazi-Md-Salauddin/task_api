@@ -1,72 +1,53 @@
 # Task API
 
-A simple in-memory CRUD REST API built with Node.js and Express.js.
+A beginner-friendly CRUD REST API for tasks, built with Node.js, Express, and SQLite. You can create, list, retrieve, update, and delete tasks through the API.
 
-## Features
+Each task has an automatically generated `id`, a `title`, and a `done` status.
 
-* Create a task
-* Get all tasks
-* Get a task by ID
-* Update a task
-* Delete a task
-* Swagger API documentation
-* Input validation
-* In-memory data storage
+## Why SQLite?
 
-## Technologies
+SQLite is a good fit for this project because it:
 
-* Node.js
-* Express.js
-* Swagger UI Express
+- Stores the database in a single file.
+- Requires minimal setup.
+- Does not need a separate database server.
+- Keeps task data when the application restarts.
+
+## Database setup
+
+The database file is `tasks.db` in the project directory. When the application starts, it automatically creates the file if it does not exist and creates the `tasks` table if needed.
+
+The application inserts three example tasks only when the `tasks` table is empty. Restarting the server does not insert duplicate seed tasks.
 
 ## Installation
 
-Clone the repository:
-
-```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-```
-
-Go to the project directory:
-
-```bash
-cd task_api
-```
-
-Install dependencies:
+From the project directory, install the dependencies:
 
 ```bash
 npm install
 ```
 
-Start the server:
+## Start the server
 
 ```bash
 node server.js
 ```
 
-The API will run at:
+The API runs at `http://localhost:5000`.
 
-```text
-http://localhost:5000
-```
+## API endpoints
 
-## API Endpoints
-
-| Method | Endpoint     | Description           |
-| ------ | ------------ | --------------------- |
-| GET    | `/`          | API information       |
-| GET    | `/health`    | Health check          |
-| GET    | `/tasks`     | Get all tasks         |
-| GET    | `/tasks/:id` | Get task by ID        |
-| POST   | `/tasks`     | Create a task         |
-| PUT    | `/tasks/:id` | Update a task         |
-| DELETE | `/tasks/:id` | Delete a task         |
-| GET    | `/docs`      | Swagger documentation |
-
-## Example Request
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/tasks` | Get all tasks |
+| GET | `/tasks/:id` | Get one task by ID |
+| POST | `/tasks` | Create a task |
+| PUT | `/tasks/:id` | Update a task |
+| DELETE | `/tasks/:id` | Delete a task |
 
 ### Create a task
+
+Send a JSON body with a non-empty title:
 
 ```json
 {
@@ -74,7 +55,7 @@ http://localhost:5000
 }
 ```
 
-### Example Response
+A successful create returns the task, including its database-generated ID:
 
 ```json
 {
@@ -84,50 +65,22 @@ http://localhost:5000
 }
 ```
 
-## Status Codes
+## Example SQL query
 
-* `200` — Successful request
-* `201` — Task created
-* `204` — Task deleted
-* `400` — Invalid request
-* `404` — Task not found
+The update endpoint uses a parameterized SQL query:
 
-## API Test
-```text
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Content-Type: application/json; charset=utf-8
-Content-Length: 139
-ETag: W/"8b-LGojVkqvSd4NeKWzNkpPYplbVlA"
-Date: Fri, 25 Sep 2026 04:07:43 GMT
-Connection: keep-alive
-Keep-Alive: timeout=5
-
-[
-  {
-    "id":1,
-    "title":"Learn Node.js",
-    "done":false
-  },
-  {
-    "id":2,
-    "title":"Build Task API","done":false
-  },
-  {
-    "id":3,
-    "title":"Learn Swagger","done":true
-  }
-]
+```sql
+UPDATE tasks SET title = ?, done = ? WHERE id = ?
 ```
-## Swagger Documentation
 
-Swagger UI is available at:
+The `?` placeholders are bound to the new title, completion status, and task ID. This updates only the task with the specified ID without inserting user-provided values directly into the SQL statement.
 
-```text
-http://localhost:5000/docs
-```
+## API documentation
+
+Swagger UI is available at `http://localhost:5000/docs`.
+
 ![Swagger UI](screenshot/swagger.png)
 
-## Note
+## Database screenshot
 
-This project uses in-memory storage, so tasks are reset whenever the server restarts.
+_Placeholder: add a screenshot of the `tasks` table opened in DB Browser for SQLite when available._
