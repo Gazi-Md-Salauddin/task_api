@@ -241,13 +241,14 @@ app.post("/tasks", (req, res) => {
     });
   }
 
+  const result = db
+    .prepare("INSERT INTO tasks (title, done) VALUES (?, ?)")
+    .run(title.trim(), 0);
   const newTask = {
-    id: tasks.length + 1,
+    id: Number(result.lastInsertRowid),
     title: title.trim(),
     done: false,
   };
-
-  tasks.push(newTask);
 
   res.status(201).json(newTask);
 })
