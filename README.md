@@ -16,6 +16,22 @@ DATABASE_URL=postgres://postgres:dev@localhost:5432/tasks
 
 PostgreSQL must be running before starting the application.
 
+## Run with Docker Compose
+
+Build and start the API and PostgreSQL services:
+
+```bash
+docker compose up --build
+```
+
+The API is available at `http://localhost:5000`; PostgreSQL is available on localhost port `5432` for local development. Compose waits for the database healthcheck before starting the API. PostgreSQL data is persisted in the `taskdata` named volume.
+
+Stop the services while preserving database data with:
+
+```bash
+docker compose down
+```
+
 ## Installation
 
 From the project directory, install the dependencies:
