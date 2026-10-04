@@ -1,12 +1,12 @@
 # Task API
 
-A beginner-friendly CRUD REST API for tasks, built with Node.js, Express, and SQLite. You can create, list, retrieve, update, and delete tasks through the API.
+A beginner-friendly CRUD REST API for tasks, built with Node.js, Express, and PostgreSQL. You can create, list, retrieve, update, and delete tasks through the API.
 
 Each task has an automatically generated `id`, a `title`, and a `done` status.
 
 ## Database setup
 
-The existing CRUD API routes continue to use SQLite in `tasks.db`. During the PostgreSQL setup stage, the application also connects to PostgreSQL using `DATABASE_URL`, creates its `tasks` table if needed, and inserts three example rows only when that table is empty. The API routes are not migrated to PostgreSQL in this stage.
+The application connects to PostgreSQL using `DATABASE_URL`, creates its `tasks` table if needed, and inserts three example rows only when that table is empty. All task endpoints use PostgreSQL.
 
 Copy `.env.example` to `.env` for local development. The default connection string is:
 
@@ -15,19 +15,6 @@ DATABASE_URL=postgres://postgres:dev@localhost:5432/tasks
 ```
 
 PostgreSQL must be running before starting the application.
-
-## Why SQLite for the current API routes?
-
-SQLite is a good fit for this project because it:
-
-- Stores the database in a single file.
-- Requires minimal setup.
-- Does not need a separate database server.
-- Keeps task data when the application restarts.
-
-The SQLite database file is `tasks.db` in the project directory. When the application starts, it automatically creates the file if it does not exist and creates the `tasks` table if needed.
-
-The A2 SQLite table retains its existing behavior: it inserts three example tasks only when the SQLite `tasks` table is empty. Restarting the server does not insert duplicate SQLite seed tasks.
 
 ## Installation
 
@@ -77,13 +64,13 @@ A successful create returns the task, including its database-generated ID:
 
 ## Example SQL query
 
-The update endpoint uses a parameterized SQL query:
+The update endpoint uses a parameterized PostgreSQL query:
 
 ```sql
-UPDATE tasks SET title = ?, done = ? WHERE id = ?
+UPDATE tasks SET title = $1, done = $2 WHERE id = $3 RETURNING *
 ```
 
-The `?` placeholders are bound to the new title, completion status, and task ID. This updates only the task with the specified ID without inserting user-provided values directly into the SQL statement.
+The placeholders are bound to the new title, completion status, and task ID. User-provided values are not inserted directly into the SQL statement.
 
 ## API documentation
 
@@ -93,4 +80,4 @@ Swagger UI is available at `http://localhost:5000/docs`.
 
 ## Database screenshot
 
-_Placeholder: add a screenshot of the `tasks` table opened in DB Browser for SQLite when available._
+_Placeholder: add a screenshot of the PostgreSQL `tasks` table when available._
