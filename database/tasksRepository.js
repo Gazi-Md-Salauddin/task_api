@@ -35,4 +35,14 @@ async function initialize() {
   }
 }
 
-module.exports = { initialize };
+async function getAll() {
+  const { rows } = await pool.query("SELECT * FROM tasks");
+  return rows;
+}
+
+async function getById(id) {
+  const { rows } = await pool.query("SELECT * FROM tasks WHERE id = $1", [id]);
+  return rows[0];
+}
+
+module.exports = { initialize, getAll, getById };

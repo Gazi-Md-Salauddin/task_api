@@ -217,26 +217,20 @@ app.get("/health", (req, res) => {
 });
 
 
-app.get("/tasks", (req, res) => {
-  const tasks = db.prepare("SELECT * FROM tasks").all();
-  res.json(tasks.map((task) => ({
-    ...task,
-    done: Boolean(task.done),
-  })));
-})
+app.get("/tasks", async (req, res) => {
+  const tasks = await tasksRepository.getAll();
+  res.json(tasks);
+});
 
-app.get("/tasks/:id", (req, res) => {
-  const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(req.params.id);
+app.get("/tasks/:id", async (req, res) => {
+  const task = await tasksRepository.getById(req.params.id);
 
-  if(!task) {
+  if (!task) {
     return res.status(404).json({
       error: "Task not found",
-    })
+    });
   }
-  res.json({
-    ...task,
-    done: Boolean(task.done),
-  });
+  res.json(task);
 });
 
 
