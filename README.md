@@ -4,7 +4,19 @@ A beginner-friendly CRUD REST API for tasks, built with Node.js, Express, and SQ
 
 Each task has an automatically generated `id`, a `title`, and a `done` status.
 
-## Why SQLite?
+## Database setup
+
+The existing CRUD API routes continue to use SQLite in `tasks.db`. During the PostgreSQL setup stage, the application also connects to PostgreSQL using `DATABASE_URL`, creates its `tasks` table if needed, and inserts three example rows only when that table is empty. The API routes are not migrated to PostgreSQL in this stage.
+
+Copy `.env.example` to `.env` for local development. The default connection string is:
+
+```text
+DATABASE_URL=postgres://postgres:dev@localhost:5432/tasks
+```
+
+PostgreSQL must be running before starting the application.
+
+## Why SQLite for the current API routes?
 
 SQLite is a good fit for this project because it:
 
@@ -13,11 +25,9 @@ SQLite is a good fit for this project because it:
 - Does not need a separate database server.
 - Keeps task data when the application restarts.
 
-## Database setup
+The SQLite database file is `tasks.db` in the project directory. When the application starts, it automatically creates the file if it does not exist and creates the `tasks` table if needed.
 
-The database file is `tasks.db` in the project directory. When the application starts, it automatically creates the file if it does not exist and creates the `tasks` table if needed.
-
-The application inserts three example tasks only when the `tasks` table is empty. Restarting the server does not insert duplicate seed tasks.
+The A2 SQLite table retains its existing behavior: it inserts three example tasks only when the SQLite `tasks` table is empty. Restarting the server does not insert duplicate SQLite seed tasks.
 
 ## Installation
 

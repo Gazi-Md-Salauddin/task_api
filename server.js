@@ -2,6 +2,14 @@ const express = require("express");
 const swaggerUi = require("swagger-ui-express");
 const Database = require("better-sqlite3");
 const path = require("node:path");
+const fs = require("node:fs");
+
+const envPath = path.join(__dirname, ".env");
+if (fs.existsSync(envPath)) {
+  process.loadEnvFile(envPath);
+}
+
+const tasksRepository = require("./database/tasksRepository");
 
 const app = express();
 
@@ -304,6 +312,16 @@ app.delete("/tasks/:id", (req, res) => {
   res.status(204).send();
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+async function startServer() {
+  try {
+    await tasksRepository.initialize();
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to initialize PostgreSQL:", error);
+    process.exitCode = 1;
+  }
+}
+
+startServer();
