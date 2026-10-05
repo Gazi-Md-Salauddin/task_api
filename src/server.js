@@ -32,7 +32,325 @@ const swaggerDocument = {
       url: "http://localhost:5000",
     },
   ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
+    schemas: {
+      AuthCredentials: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            minLength: 1,
+          },
+        },
+      },
+      ErrorResponse: {
+        type: "object",
+        required: ["error"],
+        properties: {
+          error: {
+            type: "string",
+          },
+        },
+      },
+      UserProfile: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+          },
+          email: {
+            type: "string",
+            format: "email",
+          },
+          created_at: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+      },
+      SignupResponse: {
+        type: "object",
+        properties: {
+          user: {
+            $ref: "#/components/schemas/UserProfile",
+          },
+        },
+      },
+      LoginResponse: {
+        type: "object",
+        required: ["access_token", "refresh_token", "user"],
+        properties: {
+          access_token: {
+            type: "string",
+          },
+          refresh_token: {
+            type: "string",
+          },
+          user: {
+            $ref: "#/components/schemas/UserProfile",
+          },
+        },
+      },
+      DashboardResponse: {
+        type: "object",
+        properties: {
+          message: {
+            type: "string",
+          },
+          user: {
+            type: "object",
+            properties: {
+              id: {
+                type: "string",
+              },
+              email: {
+                type: "string",
+                format: "email",
+              },
+            },
+          },
+        },
+      },
+      PublicInfoResponse: {
+        type: "object",
+        required: ["message"],
+        properties: {
+          message: {
+            type: "string",
+            example: "Welcome stranger! This info is public.",
+          },
+        },
+      },
+    },
+  },
   paths: {
+    "/auth/signup": {
+      post: {
+        tags: ["Auth"],
+        summary: "Create an account",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/AuthCredentials",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Account created",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/SignupResponse",
+                },
+              },
+            },
+          },
+          400: {
+            description: "Email or password is missing or signup was rejected",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          502: {
+            description: "Authentication service unavailable",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log in",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/AuthCredentials",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Login successful",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/LoginResponse",
+                },
+              },
+            },
+          },
+          400: {
+            description: "Email or password is missing",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          401: {
+            description: "Invalid login credentials",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          502: {
+            description: "Authentication service unavailable",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/auth/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Log out",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          204: {
+            description: "Logged out successfully",
+          },
+          401: {
+            description: "Missing or invalid access token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          502: {
+            description: "Logout failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/protected/profile": {
+      get: {
+        tags: ["Protected"],
+        summary: "Get the authenticated user's profile",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Verified user profile",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UserProfile",
+                },
+              },
+            },
+          },
+          401: {
+            description: "Missing or invalid access token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/protected/dashboard": {
+      get: {
+        tags: ["Protected"],
+        summary: "Get the authenticated user's dashboard",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Protected dashboard information",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/DashboardResponse",
+                },
+              },
+            },
+          },
+          401: {
+            description: "Missing or invalid access token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/public/info": {
+      get: {
+        tags: ["Public"],
+        summary: "Get public information",
+        responses: {
+          200: {
+            description: "Public information",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/PublicInfoResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/tasks": {
       get: {
         summary: "Get all tasks",
