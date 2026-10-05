@@ -1,5 +1,6 @@
 const express = require("express");
 const supabase = require("../config/supabase");
+const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -54,6 +55,20 @@ router.post("/login", async (req, res) => {
     });
   } catch {
     return res.status(502).json({ error: "Authentication service unavailable" });
+  }
+});
+
+router.post("/logout", authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      return res.status(502).json({ error: "Unable to log out" });
+    }
+
+    return res.status(204).send();
+  } catch {
+    return res.status(502).json({ error: "Unable to log out" });
   }
 });
 
