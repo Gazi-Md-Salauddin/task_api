@@ -1,163 +1,131 @@
 # Task API
 
-## Project overview
+## Project Overview
 
-A Task CRUD REST API backed by PostgreSQL. Docker Compose runs the API and database together, so a clean clone can be started with one command without separately installing PostgreSQL.
+An Express.js API that uses Supabase Auth for signup, login, access-token verification, and logout. It includes reusable authentication middleware, protected profile and dashboard routes, public information, Swagger documentation, and the existing PostgreSQL-backed task CRUD API.
 
-## Tech stack
+## Features
 
-- Node.js
-- Express
-- PostgreSQL
-- `pg` (Node.js PostgreSQL client)
-- Docker
-- Docker Compose
+- Supabase Auth signup and password login
+- Access-token verification through Supabase
+- Reusable middleware for protected routes
+- Protected profile and dashboard endpoints
+- Protected logout endpoint
+- Public information endpoint
+- Swagger UI with Bearer authentication support
+- PostgreSQL-backed task CRUD endpoints
+
+## Tech Stack
+
+- Node.js (22 or later)
+- Express.js
+- Supabase JavaScript client (`@supabase/supabase-js`)
+- PostgreSQL and `pg`
+- Swagger UI Express and OpenAPI 3.0
 
 ## Prerequisites
 
-- Git
-- Docker Desktop, running with Docker Compose available
+- Node.js 22 or later and npm
+- A running PostgreSQL database
+- A Supabase project URL and its public anon key
 
-Node.js and PostgreSQL do not need to be installed on the host to use the Docker Compose workflow.
+## Environment Variables
 
-## Run with Docker Compose
+Copy `.env.example` to `.env` and set the values for your environment:
 
-From the repository directory, start the API and PostgreSQL database:
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string used by the task repository. |
+| `SUPABASE_URL` | Supabase project URL. |
+| `SUPABASE_KEY` | Supabase public anon key; do not use a `service_role` key. |
+| `PORT` | Present in `.env.example`, but the current server listens on port `5000` and does not read this variable. |
 
-```bash
-docker compose up --build
-```
+The example database URL expects PostgreSQL on `localhost:5432`, with a database named `tasks`. Replace example values as needed. Do not put real credentials in source code. `.env` is ignored by Git and must not be committed.
 
-The API is available at `http://localhost:5000`. Compose waits for PostgreSQL to pass its healthcheck before starting the API.
-
-Stop the services while preserving the database:
-
-```bash
-docker compose down
-```
-
-PostgreSQL data is stored in the named `taskdata` volume and survives container removal and restart. **Warning:** `docker compose down -v` also removes the named volume and permanently deletes its database data.
-
-After cloning the repository, run `docker compose up --build`; no PostgreSQL installation or committed `.env` file is needed.
-
-## Environment variables
-
-`.env.example` documents the connection string for running the API directly on the host:
-
-```env
-DATABASE_URL=postgres://postgres:dev@localhost:5432/tasks
-```
-
-For local non-Docker development, copy `.env.example` to `.env` and provide a running local PostgreSQL database with those connection details. The `.env` file is ignored by Git and should not be committed.
-
-Docker Compose supplies its own connection string to the API container:
-
-```env
-DATABASE_URL=postgres://postgres:dev@db:5432/tasks
-```
-
-Here, `db` is the PostgreSQL service hostname on the Compose network; `localhost` inside the API container would refer to the API container itself. The `dev` password is a local development default, not a production secret.
-
-## API base URL
-
-The local API base URL is:
-
-```text
-http://localhost:5000
-```
-
-Swagger UI is available at `http://localhost:5000/docs`.
-
-## API endpoints
-
-| Method | Path | Purpose | Request body | Success | Important errors |
-| --- | --- | --- | --- | --- | --- |
-| GET | `/tasks` | List tasks | None | `200 OK`, JSON array | — |
-| GET | `/tasks/:id` | Get one task | None | `200 OK`, task JSON | `404 Not Found` |
-| POST | `/tasks` | Create a task | JSON `title` required; `done` optional (defaults to `false`) | `201 Created`, task JSON | `400 Bad Request` for missing/blank title or invalid `done` |
-| PUT | `/tasks/:id` | Update task fields | JSON with optional `title` and/or `done`; omitted fields stay unchanged | `200 OK`, task JSON | `400 Bad Request` for invalid task data; `404 Not Found` |
-| DELETE | `/tasks/:id` | Delete a task | None | `204 No Content`, empty body | `404 Not Found` |
-
-Example create body:
-
-```json
-{
-  "title": "Learn Docker",
-  "done": false
-}
-```
-
-Example partial update body:
-
-```json
-{
-  "done": true
-}
-```
-
-Tasks have an integer `id`, string `title`, and boolean `done`. A missing task returns `404` with `{"error":"Task not found"}`. A missing or blank create title returns `400` with `{"error":"Title is required"}`.
-
-## CRUD examples
-
-These examples use `curl` and the local API port:
-
-List tasks:
+## Installation
 
 ```bash
-curl http://localhost:5000/tasks
+npm ci
 ```
 
-Get task with ID 1:
+## Run Locally
+
+Start PostgreSQL and configure `.env`, then run the existing start script:
 
 ```bash
-curl http://localhost:5000/tasks/1
+npm start
 ```
 
-Create a task:
+The server listens at `http://localhost:5000`. On startup, it creates the `tasks` table if needed and inserts three sample tasks only when the table is empty. The app requires the database to be available during startup.
 
-```bash
-curl -X POST http://localhost:5000/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Learn Docker","done":false}'
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+| --- | --- | --- | --- |
+| POST | `/auth/signup` | No | Create a Supabase Auth account. Requires `email` and `password`. |
+| POST | `/auth/login` | No | Log in with email and password; returns access and refresh tokens. |
+| POST | `/auth/logout` | Bearer token | Verify the caller and sign out. Returns `204` on success. |
+| GET | `/protected/profile` | Bearer token | Return the verified user's ID, email, and account creation date. |
+| GET | `/protected/dashboard` | Bearer token | Return the protected dashboard response for the verified user. |
+| GET | `/public/info` | No | Return the public welcome message. |
+| GET | `/tasks` | No | List tasks. |
+| GET | `/tasks/:id` | No | Get a task by ID. |
+| POST | `/tasks` | No | Create a task with a required title and optional `done` value. |
+| PUT | `/tasks/:id` | No | Update a task's title and/or `done` value. |
+| DELETE | `/tasks/:id` | No | Delete a task. |
+
+## Authentication
+
+After a successful login, send the returned access token on protected requests using:
+
+```http
+Authorization: Bearer <access_token>
 ```
 
-Update task with ID 1:
+The reusable middleware verifies the token with Supabase before the protected handler runs. Missing or invalid tokens receive `401 Unauthorized`.
 
-```bash
-curl -X PUT http://localhost:5000/tasks/1 \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Learn Docker Compose","done":true}'
-```
+Signup and login request bodies are JSON with `email` and `password` fields. Supabase handles password storage and authentication.
 
-Delete task with ID 1:
+## Swagger Documentation
 
-```bash
-curl -X DELETE http://localhost:5000/tasks/1
-```
+Open [http://localhost:5000/docs](http://localhost:5000/docs). Select **Authorize** and enter the access token; Swagger UI uses the configured HTTP Bearer scheme when sending protected requests. The document applies authentication only to logout, profile, and dashboard operations.
 
-## Database behavior
-
-On startup, the API creates the PostgreSQL `tasks` table if it does not exist. It inserts exactly three example tasks only when the table is empty, so restarts do not duplicate seed records. PostgreSQL data is persisted in the Compose named volume `taskdata`.
-
-## Project structure
+## Project Structure
 
 ```text
 task_api/
-├── server.js
 ├── database/
 │   └── tasksRepository.js
-├── Dockerfile
-├── compose.yaml
-├── .dockerignore
+├── src/
+│   ├── config/
+│   │   └── supabase.js
+│   ├── middleware/
+│   │   └── authMiddleware.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   └── gateRoutes.js
+│   └── server.js
 ├── .env.example
+├── .gitignore
+├── compose.yaml
+├── Dockerfile
 ├── package.json
 ├── package-lock.json
 └── README.md
 ```
 
-## Troubleshooting
+The OpenAPI specification is defined in `src/server.js`; `src/config/supabase.js` exports the shared Supabase client, and `src/middleware/authMiddleware.js` verifies protected requests.
 
-- **Docker Desktop or daemon is not running:** Start Docker Desktop and wait for the engine to become available, then run `docker compose up --build` again.
-- **Port 5000 is already in use:** Stop the process using that port, then restart the stack. The API is configured to listen on host port `5000`.
-- **PostgreSQL connection or startup issue:** Check Docker Desktop is running and allow the database healthcheck to pass; Compose starts the API only after the database reports healthy.
-- **Stop or restart the stack:** Use `docker compose down` to stop services without deleting data, then `docker compose up --build` to start them again. Do not use `docker compose down -v` unless you intend to delete the `taskdata` database volume.
+## Testing
+
+Stages 1–5 were checked with in-process HTTP requests using stubbed Supabase responses. Checks covered auth input/success/error responses, missing and invalid tokens, profile and dashboard protection, logout success and failure, and Swagger UI loading plus documented route/security metadata. Syntax and diff checks also passed.
+
+These checks did not use a live Supabase account or real access token. The `npm test` script is currently a placeholder and does not run an automated test suite.
+
+## Security Notes
+
+- Supabase handles passwords; the application does not store or manually hash them.
+- Access tokens are verified with Supabase before protected route handlers run.
+- Protected routes share the reusable authentication middleware.
+- Keep Supabase credentials in environment variables and use only the public anon key.
+- Never commit `.env`; it is listed in `.gitignore`.
