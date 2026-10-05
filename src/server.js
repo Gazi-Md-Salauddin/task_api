@@ -9,10 +9,12 @@ if (fs.existsSync(envPath)) {
 }
 
 const tasksRepository = require("../database/tasksRepository");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
 app.use(express.json());
+app.use("/auth", authRoutes);
 
 const PORT = 5000;
 
