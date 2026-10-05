@@ -3,12 +3,12 @@ const swaggerUi = require("swagger-ui-express");
 const path = require("node:path");
 const fs = require("node:fs");
 
-const envPath = path.join(__dirname, ".env");
+const envPath = path.join(__dirname, "..", ".env");
 if (fs.existsSync(envPath)) {
   process.loadEnvFile(envPath);
 }
 
-const tasksRepository = require("./database/tasksRepository");
+const tasksRepository = require("../database/tasksRepository");
 
 const app = express();
 
