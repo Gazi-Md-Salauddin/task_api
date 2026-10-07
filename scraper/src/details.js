@@ -35,8 +35,9 @@ function extractRawRecord(html, { product_url, source_page, fetched_at }) {
   };
 }
 
-async function fetchBookDetails({ books, cacheDir, fetchCache }) {
+async function fetchBookDetails({ books, cacheDir, fetchCache, onEvent }) {
   const records = [];
+  let failedPages = 0;
   let lastRequestStartedAt;
 
   async function paceNetworkRequest() {
@@ -50,23 +51,29 @@ async function fetchBookDetails({ books, cacheDir, fetchCache }) {
   }
 
   for (const book of books) {
-    const cacheKey = createHash("sha256").update(book.url).digest("hex");
-    const cacheFile = path.join(cacheDir, `${cacheKey}.html`);
-    const html = await fetchCache(book.url, cacheFile, {
-      beforeNetworkRequest: paceNetworkRequest,
-      retryOnce: true,
-    });
-    const fetchedAt = new Date().toISOString();
-    records.push(
-      extractRawRecord(html, {
-        product_url: book.url,
-        source_page: book.source_page,
-        fetched_at: fetchedAt,
-      }),
-    );
+    try {
+      const cacheKey = createHash("sha256").update(book.url).digest("hex");
+      const cacheFile = path.join(cacheDir, `${cacheKey}.html`);
+      const html = await fetchCache(book.url, cacheFile, {
+        beforeNetworkRequest: paceNetworkRequest,
+        onEvent,
+        retryOnce: true,
+      });
+      const fetchedAt = new Date().toISOString();
+      records.push(
+        extractRawRecord(html, {
+          product_url: book.url,
+          source_page: book.source_page,
+          fetched_at: fetchedAt,
+        }),
+      );
+    } catch (error) {
+      failedPages += 1;
+      console.error(`Failed detail page ${book.url}: ${error.message}`);
+    }
   }
 
-  return records;
+  return { records, failedPages };
 }
 
 module.exports = { extractRawRecord, fetchBookDetails };

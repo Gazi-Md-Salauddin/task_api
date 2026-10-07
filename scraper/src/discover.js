@@ -11,6 +11,7 @@ async function discoverCatalogue({
   startUrl,
   cacheDir,
   fetchCache,
+  onEvent,
   pageLimit = 3,
 }) {
   const cataloguePages = [];
@@ -33,6 +34,7 @@ async function discoverCatalogue({
     const cacheFile = path.join(cacheDir, `catalogue-page-${pageNumber}.html`);
     const html = await fetchCache(pageUrl, cacheFile, {
       beforeNetworkRequest: paceNetworkRequest,
+      onEvent,
     });
     const $ = cheerio.load(html);
 

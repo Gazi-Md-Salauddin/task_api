@@ -32,3 +32,7 @@ The same command fetches and caches each discovered product detail page in `scra
 ## Stage 4 — Validate and Store
 
 The same command adds numeric `price_gbp`, validates every final book record with Zod, removes duplicates by `product_url`, and writes readable JSON to `scraper/output/books.json`. Invalid records and validation messages are written to `scraper/output/errors.json`. Both output files are regenerated on each run.
+
+## Stage 5 — Failure Handling and Run Report
+
+Detail pages are processed independently; a failed request or extraction is logged and skipped. Timeouts and HTTP 5xx responses retry once, while other HTTP statuses do not. The scraper writes actual run counters to `scraper/output/run-report.json`. To exercise the controlled failure path without contacting the target, run with `TEST_FAILURE=true`; this adds one localhost-only fake detail URL.
