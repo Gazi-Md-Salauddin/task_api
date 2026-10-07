@@ -11,12 +11,12 @@
 
 I will not reuse this code on another site without checking its rules and terms first.
 
-## Stage 0 Verification
+## Stage 1 — Fetch and Cache
 
-Run the placeholder entry point with:
+Run the scraper from the repository root:
 
-```bash
+```sh
 node scraper/src/index.js
 ```
 
-Confirm it reports that Stage 0 is complete and does not fetch or scrape catalogue pages. Review the target classification and recorded robots.txt status above.
+The first run requests catalogue page 1 and saves the HTML to `scraper/cache/catalogue-page-1.html`, reporting `FETCH` and the response size. Later runs use the cached file and report `CACHE HIT` and its size without making a network request. The fetch has a 10-second timeout and accepts only HTTP 200 responses.
