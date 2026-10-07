@@ -13,7 +13,7 @@ const CATALOGUE_PAGE_1_CACHE = path.join(
   "catalogue-page-1.html",
 );
 
-async function fetchAndCache(url, cacheFilePath) {
+async function fetchAndCache(url, cacheFilePath, { beforeNetworkRequest } = {}) {
   let cachedContent;
 
   try {
@@ -28,6 +28,10 @@ async function fetchAndCache(url, cacheFilePath) {
     console.log("CACHE HIT");
     console.log(`Response size: ${cachedContent.length} bytes`);
     return cachedContent;
+  }
+
+  if (beforeNetworkRequest) {
+    await beforeNetworkRequest();
   }
 
   const response = await fetch(url, {
@@ -49,12 +53,22 @@ async function fetchAndCache(url, cacheFilePath) {
 }
 
 if (require.main === module) {
-  fetchAndCache(CATALOGUE_PAGE_1_URL, CATALOGUE_PAGE_1_CACHE).catch(
-    (error) => {
-      console.error(`Scrape fetch failed: ${error.message}`);
+  const { discoverCatalogue } = require("./discover");
+
+  discoverCatalogue({
+    startUrl: CATALOGUE_PAGE_1_URL,
+    cacheDir: path.dirname(CATALOGUE_PAGE_1_CACHE),
+    fetchCache: fetchAndCache,
+  })
+    .then(({ cataloguePages, books }) => {
+      console.log(`catalogue_pages=${cataloguePages.length}`);
+      console.log(`discovered=${books.length}`);
+      console.log(`unique_urls=${new Set(books.map((book) => book.url)).size}`);
+    })
+    .catch((error) => {
+      console.error(`Scrape discovery failed: ${error.message}`);
       process.exitCode = 1;
-    },
-  );
+    });
 }
 
 module.exports = { fetchAndCache };

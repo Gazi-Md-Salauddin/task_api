@@ -20,3 +20,7 @@ node scraper/src/index.js
 ```
 
 The first run requests catalogue page 1 and saves the HTML to `scraper/cache/catalogue-page-1.html`, reporting `FETCH` and the response size. Later runs use the cached file and report `CACHE HIT` and its size without making a network request. The fetch has a 10-second timeout and accepts only HTTP 200 responses.
+
+## Stage 2 — Catalogue Discovery
+
+The same command parses catalogue pages 1–3 with Cheerio, follows each page's `next` link, and resolves book links against their source page URLs. It reports the number of catalogue pages, discovered books, and unique URLs. Catalogue HTML is cached by page; a 500 ms minimum interval is applied between real network requests only.
