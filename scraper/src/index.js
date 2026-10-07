@@ -1,5 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { createHash } = require("node:crypto");
 
 const USER_AGENT =
   "FlyRankInternshipA9/1.0 (+https://github.com/Gazi-Md-Salauddin)";
@@ -13,7 +14,11 @@ const CATALOGUE_PAGE_1_CACHE = path.join(
   "catalogue-page-1.html",
 );
 
-async function fetchAndCache(url, cacheFilePath, { beforeNetworkRequest } = {}) {
+async function fetchAndCache(
+  url,
+  cacheFilePath,
+  { beforeNetworkRequest, retryOnce = false, retryDelayMs = 1_000 } = {},
+) {
   let cachedContent;
 
   try {
@@ -30,26 +35,48 @@ async function fetchAndCache(url, cacheFilePath, { beforeNetworkRequest } = {}) 
     return cachedContent;
   }
 
-  if (beforeNetworkRequest) {
-    await beforeNetworkRequest();
+  let attempt = 0;
+  while (true) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+
+    if (beforeNetworkRequest) {
+      await beforeNetworkRequest();
+    }
+
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+
+      if (response.status !== 200) {
+        const error = new Error(`Request failed with HTTP ${response.status}`);
+        error.status = response.status;
+        if (response.status >= 500 && retryOnce && attempt === 0) {
+          attempt += 1;
+          continue;
+        }
+        throw error;
+      }
+
+      const content = Buffer.from(await response.arrayBuffer());
+      await fs.mkdir(path.dirname(cacheFilePath), { recursive: true });
+      await fs.writeFile(cacheFilePath, content);
+
+      console.log("FETCH");
+      console.log(`Response size: ${content.length} bytes`);
+      return content;
+    } catch (error) {
+      const isTimeout =
+        error.name === "TimeoutError" || error.name === "AbortError";
+      if (!isTimeout || !retryOnce || attempt > 0) {
+        throw error;
+      }
+      attempt += 1;
+    }
   }
-
-  const response = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-
-  if (response.status !== 200) {
-    throw new Error(`Request failed with HTTP ${response.status}`);
-  }
-
-  const content = Buffer.from(await response.arrayBuffer());
-  await fs.mkdir(path.dirname(cacheFilePath), { recursive: true });
-  await fs.writeFile(cacheFilePath, content);
-
-  console.log("FETCH");
-  console.log(`Response size: ${content.length} bytes`);
-  return content;
 }
 
 if (require.main === module) {
@@ -60,10 +87,18 @@ if (require.main === module) {
     cacheDir: path.dirname(CATALOGUE_PAGE_1_CACHE),
     fetchCache: fetchAndCache,
   })
-    .then(({ cataloguePages, books }) => {
+    .then(async ({ cataloguePages, books }) => {
       console.log(`catalogue_pages=${cataloguePages.length}`);
       console.log(`discovered=${books.length}`);
       console.log(`unique_urls=${new Set(books.map((book) => book.url)).size}`);
+      const { fetchBookDetails } = require("./details");
+      const rawRecords = await fetchBookDetails({
+        books,
+        cacheDir: path.join(__dirname, "..", "cache", "detail-pages"),
+        fetchCache: fetchAndCache,
+      });
+      console.log(JSON.stringify(rawRecords[0], null, 2));
+      console.log(`detail_pages=${rawRecords.length}`);
     })
     .catch((error) => {
       console.error(`Scrape discovery failed: ${error.message}`);

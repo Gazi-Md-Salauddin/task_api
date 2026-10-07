@@ -24,3 +24,7 @@ The first run requests catalogue page 1 and saves the HTML to `scraper/cache/cat
 ## Stage 2 — Catalogue Discovery
 
 The same command parses catalogue pages 1–3 with Cheerio, follows each page's `next` link, and resolves book links against their source page URLs. It reports the number of catalogue pages, discovered books, and unique URLs. Catalogue HTML is cached by page; a 500 ms minimum interval is applied between real network requests only.
+
+## Stage 3 — Raw Detail Records
+
+The same command fetches and caches each discovered product detail page in `scraper/cache/detail-pages/`. It extracts one raw record per book, prints the first record as a checkpoint, and reports `detail_pages=60`. Timeouts and HTTP 5xx responses are retried once; other HTTP failures are not retried. The raw extraction helper returns only the eight requested fields and does not normalize prices or validate records.
