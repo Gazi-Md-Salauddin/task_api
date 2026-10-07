@@ -1,38 +1,122 @@
-# Books to Scrape — Stage 0
+# Books to Scrape Pipeline
+
+## Project Overview
+
+A polite JavaScript scraping pipeline for the public Books to Scrape practice site. It discovers books from the first three catalogue pages, caches responses, extracts and validates book records, then writes the data and run metrics to JSON files.
 
 ## Target Classification
 
-- **Target:** Books to Scrape
-- **Why this target is appropriate:** The [ToScrape landing page](https://toscrape.com/) describes Books to Scrape as a fictional bookstore that wants to be scraped and a safe place for beginners to learn web scraping and developers to validate scraping technologies.
+- **Target:** Books to Scrape (`https://books.toscrape.com/`).
+- **Why it is appropriate:** The [ToScrape landing page](https://toscrape.com/) describes it as a fictional bookstore intended as a safe practice site for learning and validating scraping.
 - **Scope:** The first 3 catalogue pages only.
-- **What data will be collected:** Book title, price, availability, star rating, and product-page URL.
-- **Actual robots.txt result:** A request to `https://books.toscrape.com/robots.txt` returned **HTTP 404 Not Found**. No robots.txt directives were returned.
-- **Why scraping this target is appropriate for this assignment:** The target is explicitly presented by its operator as a safe, public practice sandbox for learning and validating scraping. This assignment will stay within the first three catalogue pages.
+- **Data collected:** Book title, product URL, original price text, numeric GBP price, availability, star rating, description when present, source catalogue page, and fetch timestamp.
+- **robots.txt result:** The single request to `https://books.toscrape.com/robots.txt` returned **HTTP 404 Not Found**; no robots.txt directives were returned.
 
 I will not reuse this code on another site without checking its rules and terms first.
 
-## Stage 1 — Fetch and Cache
+## Tech Stack
 
-Run the scraper from the repository root:
+- Node.js 20+
+- JavaScript (CommonJS)
+- Node.js `fetch`
+- Cheerio for HTML parsing
+- Zod for record validation
+
+## Installation
+
+The `package.json` and lockfile are in the repository root. From that directory, install dependencies with:
+
+```sh
+npm install
+```
+
+## Run
+
+From the repository root, run:
 
 ```sh
 node scraper/src/index.js
 ```
 
-The first run requests catalogue page 1 and saves the HTML to `scraper/cache/catalogue-page-1.html`, reporting `FETCH` and the response size. Later runs use the cached file and report `CACHE HIT` and its size without making a network request. The fetch has a 10-second timeout and accepts only HTTP 200 responses.
+The normal run processes the first three catalogue pages and stores the 60 discovered unique books.
 
-## Stage 2 — Catalogue Discovery
+## Pipeline
 
-The same command parses catalogue pages 1–3 with Cheerio, follows each page's `next` link, and resolves book links against their source page URLs. It reports the number of catalogue pages, discovered books, and unique URLs. Catalogue HTML is cached by page; a 500 ms minimum interval is applied between real network requests only.
+`fetch → extract → normalize → validate → store → report`
 
-## Stage 3 — Raw Detail Records
+Catalogue links are discovered, product pages are fetched or read from cache, raw records are extracted, prices are normalized, records are validated and deduplicated, then JSON outputs and the run report are written.
 
-The same command fetches and caches each discovered product detail page in `scraper/cache/detail-pages/`. It extracts one raw record per book, prints the first record as a checkpoint, and reports `detail_pages=60`. Timeouts and HTTP 5xx responses are retried once; other HTTP failures are not retried. The raw extraction helper returns only the eight requested fields and does not normalize prices or validate records.
+## Record Schema
 
-## Stage 4 — Validate and Store
+Every valid book record contains:
 
-The same command adds numeric `price_gbp`, validates every final book record with Zod, removes duplicates by `product_url`, and writes readable JSON to `scraper/output/books.json`. Invalid records and validation messages are written to `scraper/output/errors.json`. Both output files are regenerated on each run.
+| Field | Description |
+| --- | --- |
+| `title` | Book title |
+| `product_url` | Canonical absolute HTTPS product URL; record identity |
+| `price_text` | Original price text from the page |
+| `price_gbp` | Price as a JavaScript number in GBP |
+| `availability_text` | Raw availability wording |
+| `rating_text` | Star-rating label |
+| `description` | Description text, or `null` when absent |
+| `source_page` | Catalogue page where the product link was found |
+| `fetched_at` | ISO datetime when the detail page was read |
 
-## Stage 5 — Failure Handling and Run Report
+## Politeness Rules
 
-Detail pages are processed independently; a failed request or extraction is logged and skipped. Timeouts and HTTP 5xx responses retry once, while other HTTP statuses do not. The scraper writes actual run counters to `scraper/output/run-report.json`. To exercise the controlled failure path without contacting the target, run with `TEST_FAILURE=true`; this adds one localhost-only fake detail URL.
+- Sends the identifying User-Agent `FlyRankInternshipA9/1.0 (+https://github.com/Gazi-Md-Salauddin)`.
+- Waits at least 500 ms between real requests; cached reads do not trigger the delay.
+- Uses a 10-second request timeout.
+- Checks HTTP status before accepting and caching a response; only HTTP 200 is successful.
+- Caches catalogue and product HTML so later runs avoid repeat network requests.
+- Retries a timeout or HTTP 5xx response once after a delay.
+- Does not retry HTTP 403 or 404 responses.
+
+## Validation
+
+Every extracted record is normalized and validated against the Zod book schema before it can be stored. Valid records go to `output/books.json`; invalid records, along with the failing record and validation messages, go to `output/errors.json`.
+
+## Idempotency
+
+Records are deduplicated by `product_url`, and the output file is regenerated from the current run. Re-running with the same cached catalogue and detail pages does not append duplicates; the normal scope remains 60 unique records.
+
+## Failure Handling
+
+Each detail page is processed independently. A failed fetch or extraction is logged and skipped so remaining books continue. Timeout and HTTP 5xx errors receive one retry; HTTP 403 and 404 do not. Failed detail pages are counted in `output/run-report.json`. Setting `TEST_FAILURE=true` adds one localhost-only fake URL to exercise this behavior without contacting the target site.
+
+## Output Files
+
+- `output/books.json` — validated, unique book records.
+- `output/errors.json` — invalid records and validation issues (an empty array when none fail validation).
+- `output/run-report.json` — metrics and duration for the latest run.
+- `cache/` — cached catalogue and product-page HTML.
+
+The scraper's `.gitignore` excludes `cache/` and `node_modules/`, so cached HTML and scraper-local dependencies are not committed.
+
+## Sample Run Report
+
+This is a real report from a successful normal run:
+
+```json
+{
+  "start_time": "2026-10-07T05:54:47.113Z",
+  "duration": 217,
+  "pages_fetched": 0,
+  "cache_hits": 63,
+  "valid_records": 60,
+  "invalid_records": 0,
+  "failed_pages": 0
+}
+```
+
+## Honest Limitation
+
+The scraper intentionally covers only the first three catalogue pages; it does not represent the full Books to Scrape catalogue.
+
+## Why No Browser?
+
+The required catalogue and book information is present in the HTML returned by the server. The core assignment can therefore fetch and parse the pages directly, without browser automation or JavaScript-rendered content.
+
+## Ethics Note
+
+Prefer an official API when one is available. Do not bypass logins, paywalls, or blocks. Collect only the data needed for the task, and check each site's rules and terms before scraping.
