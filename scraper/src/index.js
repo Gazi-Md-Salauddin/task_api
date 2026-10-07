@@ -99,6 +99,14 @@ if (require.main === module) {
       });
       console.log(JSON.stringify(rawRecords[0], null, 2));
       console.log(`detail_pages=${rawRecords.length}`);
+      const { validateAndStoreRecords } = require("./store");
+      const summary = await validateAndStoreRecords(
+        rawRecords,
+        path.join(__dirname, "..", "output"),
+      );
+      console.log(`valid_records=${summary.validRecords}`);
+      console.log(`invalid_records=${summary.invalidRecords}`);
+      console.log(`unique_records=${summary.uniqueRecords}`);
     })
     .catch((error) => {
       console.error(`Scrape discovery failed: ${error.message}`);

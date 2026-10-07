@@ -28,3 +28,7 @@ The same command parses catalogue pages 1–3 with Cheerio, follows each page's 
 ## Stage 3 — Raw Detail Records
 
 The same command fetches and caches each discovered product detail page in `scraper/cache/detail-pages/`. It extracts one raw record per book, prints the first record as a checkpoint, and reports `detail_pages=60`. Timeouts and HTTP 5xx responses are retried once; other HTTP failures are not retried. The raw extraction helper returns only the eight requested fields and does not normalize prices or validate records.
+
+## Stage 4 — Validate and Store
+
+The same command adds numeric `price_gbp`, validates every final book record with Zod, removes duplicates by `product_url`, and writes readable JSON to `scraper/output/books.json`. Invalid records and validation messages are written to `scraper/output/errors.json`. Both output files are regenerated on each run.
